@@ -14,6 +14,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Migrations\20200329160836_AddProject.cs" />
+    <Compile Remove="Migrations\20200329162658_addProjectTable.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Proxies" Version="2.2.4" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="2.2.4" />
     <PackageReference Include="MiniProfiler.EntityFrameworkCore" Version="4.0.165" />

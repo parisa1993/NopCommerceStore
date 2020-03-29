@@ -1,23 +1,50 @@
 ﻿using System;
 using System.Data;
 using System.Data.Common;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Nop.Core;
 using Nop.Data.Mapping;
+using Nop.Core.Data;
+using Microsoft.EntityFrameworkCore.Design;
+using Newtonsoft.Json;
 
 namespace Nop.Data
 {
     /// <summary>
     /// Represents base object context
     /// </summary>
-    public partial class NopObjectContext : DbContext, IDbContext
+    /// 
+
+    public partial class NopObjectContext : DbContext, IDbContext, IDesignTimeDbContextFactory<NopObjectContext>
     {
         #region Ctor
 
         public NopObjectContext(DbContextOptions<NopObjectContext> options) : base(options)
         {
+
+        }
+
+        public NopObjectContext()
+        {
+        }
+
+        public NopObjectContext CreateDbContext(string[] args)
+        {
+            var optionsBuilder = new DbContextOptionsBuilder<NopObjectContext>();
+
+            dynamic dataSettings;
+            using (StreamReader reader = new StreamReader(NopDataSettingsDefaults.FilePath.Replace("~/", string.Empty).TrimStart('/').Replace('/', '\\')))
+            {
+                string json = reader.ReadToEnd();
+                dataSettings = JsonConvert.DeserializeObject(json);
+            }
+
+            optionsBuilder.UseSqlServer((string)dataSettings.DataConnectionString);
+
+            return new NopObjectContext(optionsBuilder.Options);
         }
 
         #endregion
@@ -31,9 +58,9 @@ namespace Nop.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             //dynamically load all entity and query type configurations
-            var typeConfigurations = Assembly.GetExecutingAssembly().GetTypes().Where(type => 
-                (type.BaseType?.IsGenericType ?? false) 
-                    && (type.BaseType.GetGenericTypeDefinition() == typeof(NopEntityTypeConfiguration<>) 
+            var typeConfigurations = Assembly.GetExecutingAssembly().GetTypes().Where(type =>
+                (type.BaseType?.IsGenericType ?? false)
+                    && (type.BaseType.GetGenericTypeDefinition() == typeof(NopEntityTypeConfiguration<>)
                         || type.BaseType.GetGenericTypeDefinition() == typeof(NopQueryTypeConfiguration<>)));
 
             foreach (var typeConfiguration in typeConfigurations)
@@ -41,7 +68,7 @@ namespace Nop.Data
                 var configuration = (IMappingConfiguration)Activator.CreateInstance(typeConfiguration);
                 configuration.ApplyConfiguration(modelBuilder);
             }
-            
+
             base.OnModelCreating(modelBuilder);
         }
 
@@ -103,7 +130,7 @@ namespace Nop.Data
         {
             return Query<TQuery>().FromSql(CreateSqlWithParameters(sql, parameters), parameters);
         }
-        
+
         /// <summary>
         /// Creates a LINQ query for the entity based on a raw SQL query
         /// </summary>
@@ -142,10 +169,10 @@ namespace Nop.Data
             }
             else
                 result = Database.ExecuteSqlCommand(sql, parameters);
-            
+
             //return previous timeout back
             Database.SetCommandTimeout(previousTimeout);
-            
+
             return result;
         }
 
@@ -162,7 +189,7 @@ namespace Nop.Data
             var entityEntry = Entry(entity);
             if (entityEntry == null)
                 return;
-            
+
             //set the entity is not being tracked by the context
             entityEntry.State = EntityState.Detached;
         }
